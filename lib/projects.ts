@@ -1,8 +1,20 @@
-import type { Chapter, ChapterStatus } from "@prisma/client";
+import type { Chapter, ChapterStatus, Prisma } from "@prisma/client";
 
 import { prisma } from "@/lib/prisma";
 
 const draftLockedStatuses: ChapterStatus[] = ["DRAFTED", "REVIEWED", "COMPLETE"];
+const ownedProjectInclude = {
+  chapters: {
+    orderBy: {
+      chapterNumber: "asc",
+    },
+  },
+  memory: true,
+} satisfies Prisma.BookProjectInclude;
+
+export type OwnedProject = Prisma.BookProjectGetPayload<{
+  include: typeof ownedProjectInclude;
+}>;
 
 export function isDraftLockedStatus(status: ChapterStatus) {
   return draftLockedStatuses.includes(status);
@@ -48,20 +60,16 @@ export function getProjectStatusFromChapters(
   return "OUTLINE_READY";
 }
 
-export async function getOwnedProject(ownerId: string, projectId: string) {
+export async function getOwnedProject(
+  ownerId: string,
+  projectId: string,
+): Promise<OwnedProject | null> {
   return prisma.bookProject.findFirst({
     where: {
       id: projectId,
       ownerId,
     },
-    include: {
-      chapters: {
-        orderBy: {
-          chapterNumber: "asc",
-        },
-      },
-      memory: true,
-    },
+    include: ownedProjectInclude,
   });
 }
 
