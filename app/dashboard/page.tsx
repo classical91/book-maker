@@ -1,4 +1,4 @@
-import { UserButton } from "@clerk/nextjs";
+﻿import { UserButton } from "@clerk/nextjs";
 import Link from "next/link";
 
 import { StatusPill } from "@/components/status-pill";
@@ -61,12 +61,17 @@ export default async function DashboardPage() {
 
           <div className="flex items-center gap-3">
             <Link
+              href="/completed"
+              className="rounded-full border border-[var(--line)] px-5 py-3 text-sm font-semibold text-[var(--muted)] transition hover:border-[var(--foreground)] hover:text-[var(--foreground)]"
+            >
+              Completed
+            </Link>
+            <Link
               href="/projects/new"
               className="rounded-full bg-[var(--foreground)] px-5 py-3 text-sm font-semibold text-[var(--paper)] transition hover:bg-[var(--accent)]"
             >
               New project
             </Link>
-            <UserButton />
           </div>
         </header>
 
