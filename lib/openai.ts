@@ -2,14 +2,26 @@ import OpenAI from "openai";
 import { zodTextFormat } from "openai/helpers/zod";
 import { z } from "zod";
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
-
 export const OPENAI_MODEL = process.env.OPENAI_MODEL || "gpt-5.1";
+
+let openaiClient: OpenAI | null = null;
 
 export function hasOpenAIConfig() {
   return Boolean(process.env.OPENAI_API_KEY);
+}
+
+function getOpenAIClient() {
+  if (!process.env.OPENAI_API_KEY) {
+    throw new Error("OPENAI_API_KEY is not configured.");
+  }
+
+  if (!openaiClient) {
+    openaiClient = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY,
+    });
+  }
+
+  return openaiClient;
 }
 
 type StructuredGenerationOptions<TSchema extends z.ZodTypeAny> = {
@@ -29,6 +41,7 @@ export async function generateStructuredOutput<TSchema extends z.ZodTypeAny>({
     throw new Error("OPENAI_API_KEY is not configured.");
   }
 
+  const openai = getOpenAIClient();
   let lastError: unknown;
 
   for (let attempt = 0; attempt < 2; attempt += 1) {
