@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { ClerkProvider } from "@clerk/nextjs";
 import { Cormorant_Garamond, Manrope } from "next/font/google";
+import { hasClerkConfig } from "@/lib/runtime-config";
 import "./globals.css";
 
 const manrope = Manrope({
@@ -28,10 +29,12 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const authConfigured = hasClerkConfig();
+
   return (
     <html lang="en" className={`${manrope.variable} ${cormorant.variable} antialiased`}>
       <body className="min-h-screen">
-        <ClerkProvider>{children}</ClerkProvider>
+        {authConfigured ? <ClerkProvider>{children}</ClerkProvider> : children}
       </body>
     </html>
   );

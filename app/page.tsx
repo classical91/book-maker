@@ -1,9 +1,12 @@
 import { UserButton } from "@clerk/nextjs";
-import { auth } from "@clerk/nextjs/server";
 import Link from "next/link";
 
+import { getOptionalUserId } from "@/lib/auth";
+import { CLERK_SETUP_MESSAGE, hasClerkConfig } from "@/lib/runtime-config";
+
 export default async function Home() {
-  const { userId } = await auth();
+  const authConfigured = hasClerkConfig();
+  const userId = await getOptionalUserId();
 
   return (
     <div className="min-h-screen">
@@ -15,7 +18,7 @@ export default async function Home() {
           Draftloom
         </Link>
         <div className="flex items-center gap-3">
-          {userId ? (
+          {authConfigured && userId ? (
             <>
               <Link
                 href="/dashboard"
@@ -25,7 +28,7 @@ export default async function Home() {
               </Link>
               <UserButton />
             </>
-          ) : (
+          ) : authConfigured ? (
             <>
               <Link
                 href="/sign-in"
@@ -40,6 +43,10 @@ export default async function Home() {
                 Start a book
               </Link>
             </>
+          ) : (
+            <span className="rounded-full border border-amber-300 bg-amber-100 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-amber-900">
+              Auth setup required
+            </span>
           )}
         </div>
       </header>
@@ -63,20 +70,36 @@ export default async function Home() {
                 instead of pretending one prompt should write the whole book.
               </p>
 
+              {!authConfigured ? (
+                <div className="fade-rise fade-rise-slow rounded-[28px] border border-amber-300 bg-amber-100/90 px-5 py-4 text-sm leading-7 text-amber-950">
+                  {CLERK_SETUP_MESSAGE}
+                </div>
+              ) : null}
+
               <div className="fade-rise fade-rise-slow flex flex-wrap items-center gap-4">
                 <Link
-                  href={userId ? "/projects/new" : "/sign-up"}
+                  href={
+                    authConfigured ? (userId ? "/projects/new" : "/sign-up") : "#workflow"
+                  }
                   className="rounded-full bg-[var(--foreground)] px-6 py-3 text-sm font-semibold text-[var(--paper)] transition hover:bg-[var(--accent)]"
                   prefetch={false}
                 >
-                  {userId ? "Create a project" : "Start drafting"}
+                  {authConfigured
+                    ? userId
+                      ? "Create a project"
+                      : "Start drafting"
+                    : "Explore the workflow"}
                 </Link>
                 <Link
-                  href={userId ? "/dashboard" : "/sign-in"}
+                  href={authConfigured ? (userId ? "/dashboard" : "/sign-in") : "#v1"}
                   className="rounded-full border border-[var(--line)] px-6 py-3 text-sm font-semibold text-[var(--foreground)] transition hover:bg-[rgba(255,255,255,0.7)]"
                   prefetch={false}
                 >
-                  {userId ? "Open dashboard" : "I already have an account"}
+                  {authConfigured
+                    ? userId
+                      ? "Open dashboard"
+                      : "I already have an account"
+                    : "See what ships"}
                 </Link>
               </div>
 
@@ -165,7 +188,10 @@ export default async function Home() {
           </div>
         </section>
 
-        <section className="mx-auto grid w-full max-w-7xl gap-12 px-5 py-20 sm:px-8 lg:grid-cols-[0.9fr_1.1fr]">
+        <section
+          id="workflow"
+          className="mx-auto grid w-full max-w-7xl gap-12 px-5 py-20 sm:px-8 lg:grid-cols-[0.9fr_1.1fr]"
+        >
           <div className="space-y-4">
             <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[var(--muted)]">
               Why the workflow holds up
@@ -205,7 +231,7 @@ export default async function Home() {
           </div>
         </section>
 
-        <section className="border-y border-[var(--line)] bg-[rgba(33,23,17,0.94)]">
+        <section id="v1" className="border-y border-[var(--line)] bg-[rgba(33,23,17,0.94)]">
           <div className="mx-auto grid w-full max-w-7xl gap-10 px-5 py-18 text-[rgba(248,240,233,0.78)] sm:px-8 lg:grid-cols-[0.95fr_1.05fr]">
             <div className="space-y-4">
               <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[rgba(248,240,233,0.58)]">
@@ -224,7 +250,10 @@ export default async function Home() {
                 "Full manuscript assembly in reading order",
                 "DOCX export for the current manuscript",
               ].map((item) => (
-                <div key={item} className="border-t border-[rgba(248,240,233,0.12)] pt-4 text-sm leading-7">
+                <div
+                  key={item}
+                  className="border-t border-[rgba(248,240,233,0.12)] pt-4 text-sm leading-7"
+                >
                   {item}
                 </div>
               ))}
@@ -249,18 +278,24 @@ export default async function Home() {
               </div>
               <div className="flex flex-wrap gap-3">
                 <Link
-                  href={userId ? "/projects/new" : "/sign-up"}
+                  href={
+                    authConfigured ? (userId ? "/projects/new" : "/sign-up") : "#workflow"
+                  }
                   className="rounded-full bg-[var(--foreground)] px-6 py-3 text-sm font-semibold text-[var(--paper)] transition hover:bg-[var(--accent)]"
                   prefetch={false}
                 >
-                  {userId ? "Create your next book" : "Create your first book"}
+                  {authConfigured
+                    ? userId
+                      ? "Create your next book"
+                      : "Create your first book"
+                    : "Review the drafting flow"}
                 </Link>
                 <Link
-                  href={userId ? "/dashboard" : "/sign-in"}
+                  href={authConfigured ? (userId ? "/dashboard" : "/sign-in") : "#v1"}
                   className="rounded-full border border-[var(--line)] px-6 py-3 text-sm font-semibold text-[var(--foreground)] transition hover:bg-[rgba(255,255,255,0.7)]"
                   prefetch={false}
                 >
-                  {userId ? "Return to dashboard" : "Sign in"}
+                  {authConfigured ? (userId ? "Return to dashboard" : "Sign in") : "View the MVP"}
                 </Link>
               </div>
             </div>
