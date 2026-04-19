@@ -1,0 +1,72 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model BookProject {
+  id            String        @id @default(cuid())
+  ownerId       String
+  title         String
+  genre         String
+  audience      String
+  tone          String
+  premise       String        @db.Text
+  targetWords   Int
+  totalChapters Int
+  summary       String?       @db.Text
+  status        ProjectStatus @default(DRAFT)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  chapters      Chapter[]
+  memory        BookMemory?
+
+  @@index([ownerId, updatedAt])
+}
+
+model Chapter {
+  id             String        @id @default(cuid())
+  projectId      String
+  chapterNumber  Int
+  title          String
+  outlineBullets Json
+  brief          Json?
+  content        String?       @db.Text
+  summary        String?       @db.Text
+  wordCount      Int?
+  status         ChapterStatus @default(OUTLINED)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  project        BookProject   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, chapterNumber])
+  @@index([projectId, status])
+}
+
+model BookMemory {
+  id              String      @id @default(cuid())
+  projectId       String      @unique
+  keyTerms        Json?
+  styleRules      Json?
+  continuityNotes String?     @db.Text
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  project         BookProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+}
+
+enum ProjectStatus {
+  DRAFT
+  OUTLINE_READY
+  WRITING
+  COMPLETE
+}
+
+enum ChapterStatus {
+  OUTLINED
+  BRIEF_READY
+  DRAFTED
+  REVIEWED
+  COMPLETE
+}
