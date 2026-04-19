@@ -8,52 +8,56 @@ datasource db {
 
 model BookProject {
   id            String        @id @default(cuid())
-  ownerId       String
+  ownerId       String        @map("owner_id")
   title         String
   genre         String
   audience      String
   tone          String
   premise       String        @db.Text
-  targetWords   Int
-  totalChapters Int
+  targetWords   Int           @map("target_words")
+  totalChapters Int           @map("total_chapters")
   summary       String?       @db.Text
   status        ProjectStatus @default(DRAFT)
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
+  createdAt     DateTime      @default(now()) @map("created_at")
+  updatedAt     DateTime      @updatedAt @map("updated_at")
   chapters      Chapter[]
   memory        BookMemory?
 
   @@index([ownerId, updatedAt])
+  @@map("book_projects")
 }
 
 model Chapter {
   id             String        @id @default(cuid())
-  projectId      String
-  chapterNumber  Int
+  projectId      String        @map("project_id")
+  chapterNumber  Int           @map("chapter_number")
   title          String
-  outlineBullets Json
+  outlineBullets Json          @map("outline_bullets")
   brief          Json?
   content        String?       @db.Text
   summary        String?       @db.Text
-  wordCount      Int?
+  wordCount      Int?          @map("word_count")
   status         ChapterStatus @default(OUTLINED)
-  createdAt      DateTime      @default(now())
-  updatedAt      DateTime      @updatedAt
+  createdAt      DateTime      @default(now()) @map("created_at")
+  updatedAt      DateTime      @updatedAt @map("updated_at")
   project        BookProject   @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   @@unique([projectId, chapterNumber])
   @@index([projectId, status])
+  @@map("chapters")
 }
 
 model BookMemory {
   id              String      @id @default(cuid())
-  projectId       String      @unique
-  keyTerms        Json?
-  styleRules      Json?
-  continuityNotes String?     @db.Text
-  createdAt       DateTime    @default(now())
-  updatedAt       DateTime    @updatedAt
+  projectId       String      @unique @map("project_id")
+  keyTerms        Json?       @map("key_terms")
+  styleRules      Json?       @map("style_rules")
+  continuityNotes String?     @db.Text @map("continuity_notes")
+  createdAt       DateTime    @default(now()) @map("created_at")
+  updatedAt       DateTime    @updatedAt @map("updated_at")
   project         BookProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@map("book_memory")
 }
 
 enum ProjectStatus {
@@ -61,6 +65,8 @@ enum ProjectStatus {
   OUTLINE_READY
   WRITING
   COMPLETE
+
+  @@map("project_status")
 }
 
 enum ChapterStatus {
@@ -69,4 +75,6 @@ enum ChapterStatus {
   DRAFTED
   REVIEWED
   COMPLETE
+
+  @@map("chapter_status")
 }
