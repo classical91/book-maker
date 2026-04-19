@@ -124,3 +124,14 @@ select {
     transform: translate3d(0, -14px, 0) scale(1.04);
   }
 }
+
+/* ── Print / Read mode ─────────────────────────────────────── */
+@media print {
+  nav, header button, .no-print { display: none !important; }
+  body { background: white !important; color: black !important; }
+  .paper-panel { box-shadow: none !important; border: none !important; background: white !important; }
+  article { max-width: 100% !important; }
+  h1, h2 { color: black !important; }
+  p, div { color: #111 !important; }
+  a[href]:after { content: none !important; }
+}

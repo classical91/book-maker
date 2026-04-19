@@ -111,7 +111,7 @@ export default async function CompletedPage() {
                   </div>
 
                   <div className="flex items-center gap-3 px-8 py-5 border-t border-[var(--line)] bg-[rgba(255,255,255,0.3)]">
-                    <Link href={`/projects/${project.id}/manuscript`} className="text-sm font-semibold text-[var(--accent)] hover:underline">View manuscript →</Link>
+                    <Link href={`/projects/${project.id}/manuscript`} className="text-sm font-semibold text-[var(--accent)] hover:underline">Read online →</Link>
                     <span className="text-[var(--line)]">·</span>
                     <Link href={`/projects/${project.id}/outline`} className="text-sm text-[var(--muted)] hover:text-[var(--foreground)] transition">View outline</Link>
                   </div>

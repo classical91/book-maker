@@ -1,3 +1,4 @@
+﻿"use client";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
@@ -78,6 +79,12 @@ export default async function ManuscriptPage({
 
           <div className="flex flex-wrap items-center gap-3">
             <StatusPill status={project.status} />
+            <button
+              onClick={() => window.print()}
+              className="rounded-full border border-[var(--line)] px-5 py-3 text-sm font-semibold text-[var(--muted)] transition hover:border-[var(--foreground)] hover:text-[var(--foreground)]"
+            >
+              Print / Save PDF
+            </button>
             <a
               href={`/api/projects/${project.id}/export/docx`}
               className="rounded-full bg-[var(--foreground)] px-5 py-3 text-sm font-semibold text-[var(--paper)] transition hover:bg-[var(--accent)]"
@@ -157,3 +164,4 @@ export default async function ManuscriptPage({
     </main>
   );
 }
+
