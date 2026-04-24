@@ -55,7 +55,7 @@ export default async function DashboardPage() {
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
             <Link
               href="/completed"
               className="rounded-full border border-[var(--line)] px-5 py-3 text-sm font-semibold text-[var(--muted)] transition hover:border-[var(--foreground)] hover:text-[var(--foreground)]"
@@ -63,10 +63,16 @@ export default async function DashboardPage() {
               Completed
             </Link>
             <Link
+              href="/ebooks"
+              className="rounded-full border border-[var(--line)] px-5 py-3 text-sm font-semibold text-[var(--foreground)] transition hover:bg-[rgba(255,255,255,0.7)]"
+            >
+              Create your own E-book
+            </Link>
+            <Link
               href="/projects/new"
               className="rounded-full bg-[var(--foreground)] px-5 py-3 text-sm font-semibold text-[var(--paper)] transition hover:bg-[var(--accent)]"
             >
-              New project
+              Set up the book with AI
             </Link>
           </div>
         </header>
