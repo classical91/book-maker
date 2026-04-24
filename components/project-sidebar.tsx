@@ -108,14 +108,14 @@ export default function ProjectSidebar({
           })}
         </nav>
 
-        <div className="min-h-0 flex-1">
-          <div className="mb-3 flex items-center justify-between">
+        <div className="flex min-h-0 flex-1 flex-col">
+          <div className="mb-3 flex shrink-0 items-center justify-between">
             <h3 className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--muted)]">
               Chapters
             </h3>
             <span className="text-xs text-[var(--muted)]">{chapters.length}</span>
           </div>
-          <div className="grid max-h-[52vh] gap-2 overflow-y-auto pr-1 lg:max-h-none lg:overflow-visible">
+          <div className="grid min-h-0 flex-1 auto-rows-min gap-2 overflow-y-auto pr-1 max-h-[52vh] lg:max-h-none">
             {chapters.map((chapter) => {
               const href = `/projects/${projectId}/chapters/${chapter.id}`;
               const active = pathname === href;
