@@ -160,6 +160,15 @@ export default function ProjectSidebar({
             })}
           </div>
         </div>
+
+        <div className="shrink-0 border-t border-[var(--line)] pt-4">
+          <a
+            href={`/api/projects/${projectId}/export/docx`}
+            className="flex w-full items-center justify-center rounded-2xl border border-[var(--line)] bg-[rgba(255,255,255,0.5)] px-4 py-3 text-sm font-semibold text-[var(--foreground)] transition hover:bg-[rgba(255,255,255,0.9)]"
+          >
+            Export DOCX
+          </a>
+        </div>
       </div>
     </aside>
   );
