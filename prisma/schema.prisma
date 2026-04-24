@@ -78,3 +78,15 @@ enum ChapterStatus {
 
   @@map("chapter_status")
 }
+
+model Ebook {
+  id        String   @id @default(cuid())
+  ownerId   String   @map("owner_id")
+  title     String
+  content   String?  @db.Text
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([ownerId, updatedAt])
+  @@map("ebooks")
+}
