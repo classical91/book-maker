@@ -1,6 +1,7 @@
 ﻿import { UserButton } from "@clerk/nextjs";
 import Link from "next/link";
 
+import { HomeLogo } from "@/components/home-logo";
 import { StatusPill } from "@/components/status-pill";
 import { requireUserIdOrRedirect } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -42,12 +43,7 @@ export default async function DashboardPage() {
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-5 py-8 sm:px-8">
         <header className="flex flex-wrap items-start justify-between gap-5">
           <div className="space-y-3">
-            <Link
-              href="/"
-              className="text-xs font-semibold uppercase tracking-[0.28em] text-[var(--muted)]"
-            >
-              Draftloom
-            </Link>
+            <HomeLogo />
             <div>
               <h1 className="font-serif text-5xl leading-none text-[var(--foreground)]">
                 Book projects

@@ -1,6 +1,7 @@
 import { UserButton } from "@clerk/nextjs";
 import Link from "next/link";
 
+import { HomeLogo } from "@/components/home-logo";
 import { getOptionalUserId } from "@/lib/auth";
 import { CLERK_SETUP_MESSAGE, hasClerkConfig } from "@/lib/runtime-config";
 
@@ -11,12 +12,7 @@ export default async function Home() {
   return (
     <div className="min-h-screen">
       <header className="mx-auto flex w-full max-w-7xl items-center justify-between px-5 py-5 sm:px-8">
-        <Link
-          href="/"
-          className="text-xs font-semibold uppercase tracking-[0.28em] text-[var(--foreground)]"
-        >
-          Draftloom
-        </Link>
+        <HomeLogo />
         <div className="flex items-center gap-3">
           {authConfigured && userId ? (
             <>

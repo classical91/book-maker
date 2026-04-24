@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
+import { HomeLogo } from "@/components/home-logo";
 import { StatusPill } from "@/components/status-pill";
 import { cn, formatNumber } from "@/lib/utils";
 
@@ -41,12 +42,7 @@ export default function ProjectSidebar({
     <aside className="border-b border-[var(--line)] bg-[rgba(251,246,238,0.88)] backdrop-blur lg:sticky lg:top-0 lg:h-screen lg:border-b-0 lg:border-r">
       <div className="flex h-full flex-col gap-6 px-5 py-6">
         <div className="space-y-3">
-          <Link
-            href="/dashboard"
-            className="inline-flex items-center text-xs font-semibold uppercase tracking-[0.24em] text-[var(--muted)] transition hover:text-[var(--foreground)]"
-          >
-            Draftloom
-          </Link>
+          <HomeLogo />
           <div className="space-y-2">
             <h2 className="font-serif text-2xl leading-tight text-[var(--foreground)]">
               {projectTitle}

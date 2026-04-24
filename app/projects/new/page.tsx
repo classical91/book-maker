@@ -1,6 +1,7 @@
 import { UserButton } from "@clerk/nextjs";
 import Link from "next/link";
 
+import { HomeLogo } from "@/components/home-logo";
 import ProjectForm from "@/components/project-form";
 import { requireUserIdOrRedirect } from "@/lib/auth";
 
@@ -16,12 +17,16 @@ export default async function NewProjectPage() {
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-8 px-5 py-8 sm:px-8">
         <header className="flex flex-wrap items-start justify-between gap-5">
           <div className="space-y-3">
-            <Link
-              href="/dashboard"
-              className="text-xs font-semibold uppercase tracking-[0.28em] text-[var(--muted)]"
-            >
-              Back to dashboard
-            </Link>
+            <div className="flex items-center gap-4">
+              <HomeLogo />
+              <span className="text-[var(--muted)]">/</span>
+              <Link
+                href="/dashboard"
+                className="text-xs font-semibold uppercase tracking-[0.28em] text-[var(--muted)] transition hover:text-[var(--foreground)]"
+              >
+                Dashboard
+              </Link>
+            </div>
             <div>
               <h1 className="font-serif text-5xl leading-none text-[var(--foreground)]">
                 Set up the book
