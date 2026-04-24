@@ -3,6 +3,8 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
+import { DeleteEbookButton } from "@/components/delete-ebook-button";
+
 type Props = {
   id: string;
   initialTitle: string;
@@ -45,13 +47,14 @@ export function EbookEditor({ id, initialTitle, initialContent }: Props) {
           <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[var(--muted)]">
             Editing e-book
           </p>
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
             {saved && (
               <span className="text-sm font-semibold text-green-700">Saved</span>
             )}
             {error && (
               <span className="text-sm text-red-600">{error}</span>
             )}
+            <DeleteEbookButton id={id} />
             <button
               onClick={() => router.push(`/ebooks/${id}`)}
               className="rounded-full border border-[var(--line)] px-5 py-2.5 text-sm font-semibold text-[var(--muted)] transition hover:border-[var(--foreground)] hover:text-[var(--foreground)]"

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { DeleteEbookButton } from "@/components/delete-ebook-button";
 import { requireUserIdOrRedirect } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
@@ -38,12 +39,15 @@ export default async function EbookPage({
               })}
             </p>
           </div>
-          <Link
-            href={`/ebooks/${ebook.id}/edit`}
-            className="rounded-full bg-[var(--foreground)] px-5 py-3 text-sm font-semibold text-[var(--paper)] transition hover:bg-[var(--accent)]"
-          >
-            Edit
-          </Link>
+          <div className="flex items-center gap-3">
+            <DeleteEbookButton id={ebook.id} />
+            <Link
+              href={`/ebooks/${ebook.id}/edit`}
+              className="rounded-full bg-[var(--foreground)] px-5 py-3 text-sm font-semibold text-[var(--paper)] transition hover:bg-[var(--accent)]"
+            >
+              Edit
+            </Link>
+          </div>
         </header>
 
         <article className="paper-panel rounded-[32px] p-6 sm:p-10">
