@@ -1,5 +1,6 @@
 ﻿import Link from "next/link";
 
+import { HomeLogo } from "@/components/home-logo";
 import { StatusPill } from "@/components/status-pill";
 import { requireUserIdOrRedirect } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -38,9 +39,9 @@ export default async function CompletedPage() {
         <header className="flex flex-wrap items-start justify-between gap-5">
           <div className="space-y-3">
             <div className="flex items-center gap-4">
-              <Link href="/" className="text-xs font-semibold uppercase tracking-[0.28em] text-[var(--muted)]">Draftloom</Link>
+              <HomeLogo />
               <span className="text-[var(--muted)]">/</span>
-              <Link href="/dashboard" className="text-xs font-semibold uppercase tracking-[0.28em] text-[var(--muted)]">Dashboard</Link>
+              <Link href="/dashboard" className="text-xs font-semibold uppercase tracking-[0.28em] text-[var(--muted)] transition hover:text-[var(--foreground)]">Dashboard</Link>
             </div>
             <div>
               <h1 className="font-serif text-5xl leading-none text-[var(--foreground)]">Completed books</h1>
