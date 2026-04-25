@@ -80,13 +80,28 @@ enum ChapterStatus {
 }
 
 model Ebook {
-  id        String   @id @default(cuid())
-  ownerId   String   @map("owner_id")
+  id        String         @id @default(cuid())
+  ownerId   String         @map("owner_id")
   title     String
-  content   String?  @db.Text
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  content   String?        @db.Text
+  chapters  EbookChapter[]
+  createdAt DateTime       @default(now()) @map("created_at")
+  updatedAt DateTime       @updatedAt @map("updated_at")
 
   @@index([ownerId, updatedAt])
   @@map("ebooks")
+}
+
+model EbookChapter {
+  id        String   @id @default(cuid())
+  ebookId   String   @map("ebook_id")
+  title     String   @default("Untitled Chapter")
+  content   String?  @db.Text
+  position  Int      @default(0)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  ebook     Ebook    @relation(fields: [ebookId], references: [id], onDelete: Cascade)
+
+  @@index([ebookId, position])
+  @@map("ebook_chapters")
 }
