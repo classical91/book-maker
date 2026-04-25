@@ -8,8 +8,27 @@ import { prisma } from "@/lib/prisma";
 
 export const metadata = { title: "My E-books" };
 
+async function ensureEbooksTable() {
+  await prisma.$executeRawUnsafe(`
+    CREATE TABLE IF NOT EXISTS "ebooks" (
+      "id" TEXT NOT NULL,
+      "owner_id" TEXT NOT NULL,
+      "title" TEXT NOT NULL,
+      "content" TEXT,
+      "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      "updated_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      CONSTRAINT "ebooks_pkey" PRIMARY KEY ("id")
+    )
+  `);
+  await prisma.$executeRawUnsafe(`
+    CREATE INDEX IF NOT EXISTS "ebooks_owner_id_updated_at_idx" ON "ebooks"("owner_id", "updated_at")
+  `);
+}
+
 export default async function EbooksLayout({ children }: { children: ReactNode }) {
   const userId = await requireUserIdOrRedirect();
+
+  await ensureEbooksTable();
 
   const ebooks = await prisma.ebook.findMany({
     where: { ownerId: userId },
