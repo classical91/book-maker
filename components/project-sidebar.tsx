@@ -31,19 +31,20 @@ export default function ProjectSidebar({
   chapters,
 }: ProjectSidebarProps) {
   const pathname = usePathname();
-  const completedCount = chapters.filter((chapter) => chapter.status === "COMPLETE").length;
-  const draftedCount = chapters.filter((chapter) =>
-    ["DRAFTED", "REVIEWED", "COMPLETE"].includes(chapter.status),
+  const completedCount = chapters.filter((ch) => ch.status === "COMPLETE").length;
+  const draftedCount = chapters.filter((ch) =>
+    ["DRAFTED", "REVIEWED", "COMPLETE"].includes(ch.status),
   ).length;
-  const totalWords = chapters.reduce((sum, chapter) => sum + (chapter.wordCount || 0), 0);
+  const totalWords = chapters.reduce((sum, ch) => sum + (ch.wordCount || 0), 0);
   const progress = totalChapters > 0 ? Math.round((completedCount / totalChapters) * 100) : 0;
 
   return (
-    <aside className="border-b border-[var(--line)] bg-[rgba(251,246,238,0.88)] backdrop-blur lg:sticky lg:top-0 lg:h-screen lg:border-b-0 lg:border-r">
-      <div className="flex h-full flex-col gap-6 px-5 py-6">
+    <aside className="border-b border-[var(--line)] bg-white/95 backdrop-blur lg:sticky lg:top-0 lg:h-screen lg:border-b-0 lg:border-r">
+      <div className="flex h-full flex-col gap-5 px-5 py-6">
+
         <div className="space-y-3">
           <HomeLogo />
-          <div className="space-y-2">
+          <div className="space-y-1.5">
             <h2 className="font-serif text-2xl leading-tight text-[var(--foreground)]">
               {projectTitle}
             </h2>
@@ -51,12 +52,12 @@ export default function ProjectSidebar({
           </div>
         </div>
 
-        <div className="paper-panel space-y-4 p-4">
+        <div className="paper-panel space-y-4 rounded-2xl p-4">
           <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
             <span>Book progress</span>
             <span>{progress}%</span>
           </div>
-          <div className="h-2 overflow-hidden rounded-full bg-[rgba(33,23,17,0.08)]">
+          <div className="h-1.5 overflow-hidden rounded-full bg-[rgba(0,0,0,0.07)]">
             <div
               className="h-full rounded-full bg-[var(--accent)] transition-[width] duration-500"
               style={{ width: `${progress}%` }}
@@ -90,16 +91,15 @@ export default function ProjectSidebar({
             { href: `/projects/${projectId}/manuscript`, label: "Manuscript" },
           ].map((item) => {
             const active = pathname === item.href;
-
             return (
               <Link
                 key={item.href}
                 href={item.href}
                 className={cn(
-                  "rounded-2xl border border-[var(--line)] px-4 py-3 text-sm font-medium transition",
+                  "rounded-xl border px-4 py-2.5 text-sm font-semibold transition",
                   active
-                    ? "bg-[var(--foreground)] text-[var(--paper)]"
-                    : "bg-[rgba(255,255,255,0.5)] text-[var(--foreground)] hover:bg-[rgba(255,255,255,0.9)]",
+                    ? "border-[var(--foreground)] bg-[var(--foreground)] text-white"
+                    : "border-[var(--line)] bg-white text-[var(--foreground)] hover:border-[var(--accent)] hover:text-[var(--accent)]",
                 )}
               >
                 {item.label}
@@ -115,7 +115,7 @@ export default function ProjectSidebar({
             </h3>
             <span className="text-xs text-[var(--muted)]">{chapters.length}</span>
           </div>
-          <div className="grid min-h-0 flex-1 auto-rows-min gap-2 overflow-y-auto pr-1 max-h-[52vh] lg:max-h-none">
+          <div className="grid min-h-0 flex-1 auto-rows-min gap-1.5 overflow-y-auto pr-1 max-h-[52vh] lg:max-h-none">
             {chapters.map((chapter) => {
               const href = `/projects/${projectId}/chapters/${chapter.id}`;
               const active = pathname === href;
@@ -125,10 +125,10 @@ export default function ProjectSidebar({
                   key={chapter.id}
                   href={href}
                   className={cn(
-                    "rounded-2xl border border-[var(--line)] px-4 py-3 transition",
+                    "rounded-xl border px-3.5 py-3 transition",
                     active
-                      ? "bg-[rgba(33,23,17,0.92)] text-[var(--paper)]"
-                      : "bg-[rgba(255,255,255,0.55)] hover:bg-[rgba(255,255,255,0.88)]",
+                      ? "border-[var(--foreground)] bg-[var(--foreground)] text-white"
+                      : "border-[var(--line)] bg-white hover:border-[var(--accent)]",
                   )}
                 >
                   <div className="flex items-start justify-between gap-3">
@@ -136,18 +136,18 @@ export default function ProjectSidebar({
                       <p
                         className={cn(
                           "text-[10px] font-semibold uppercase tracking-[0.2em]",
-                          active ? "text-[rgba(247,240,233,0.68)]" : "text-[var(--muted)]",
+                          active ? "text-white/55" : "text-[var(--muted)]",
                         )}
                       >
-                        Chapter {chapter.chapterNumber}
+                        Ch {chapter.chapterNumber}
                       </p>
-                      <p className="mt-1 truncate text-sm font-semibold">
+                      <p className="mt-0.5 truncate text-sm font-semibold">
                         {chapter.title}
                       </p>
                       <p
                         className={cn(
-                          "mt-1 text-xs",
-                          active ? "text-[rgba(247,240,233,0.72)]" : "text-[var(--muted)]",
+                          "mt-0.5 text-xs",
+                          active ? "text-white/60" : "text-[var(--muted)]",
                         )}
                       >
                         {formatNumber(chapter.wordCount || 0)} words
@@ -164,11 +164,12 @@ export default function ProjectSidebar({
         <div className="shrink-0 border-t border-[var(--line)] pt-4">
           <a
             href={`/api/projects/${projectId}/export/docx`}
-            className="flex w-full items-center justify-center rounded-2xl border border-[var(--line)] bg-[rgba(255,255,255,0.5)] px-4 py-3 text-sm font-semibold text-[var(--foreground)] transition hover:bg-[rgba(255,255,255,0.9)]"
+            className="flex w-full items-center justify-center rounded-xl border border-[var(--line)] bg-white px-4 py-2.5 text-sm font-semibold text-[var(--foreground)] transition hover:border-[var(--accent)] hover:text-[var(--accent)]"
           >
             Export DOCX
           </a>
         </div>
+
       </div>
     </aside>
   );
