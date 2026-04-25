@@ -35,11 +35,16 @@ export function EbookList({ ebooks }: { ebooks: EbookItem[] }) {
             className={cn(
               "block px-5 py-4 transition",
               active
-                ? "bg-[rgba(33,23,17,0.06)] border-l-2 border-[var(--accent)]"
-                : "hover:bg-[rgba(255,255,255,0.6)]",
+                ? "border-l-2 border-[var(--accent)] bg-[var(--accent-soft)]"
+                : "hover:bg-[rgba(0,0,0,0.02)]",
             )}
           >
-            <p className="truncate text-sm font-semibold text-[var(--foreground)]">
+            <p
+              className={cn(
+                "truncate text-sm font-semibold",
+                active ? "text-[var(--accent)]" : "text-[var(--foreground)]",
+              )}
+            >
               {ebook.title}
             </p>
             <p className="mt-0.5 text-xs text-[var(--muted)]">
