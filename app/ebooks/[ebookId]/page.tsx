@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { DeleteEbookButton } from "@/components/delete-ebook-button";
+import { SpeakButton } from "@/components/speak-button";
 import { requireUserIdOrRedirect } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
@@ -39,7 +40,8 @@ export default async function EbookPage({
               })}
             </p>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
+            {ebook.content && <SpeakButton text={ebook.content} />}
             <DeleteEbookButton id={ebook.id} />
             <Link
               href={`/ebooks/${ebook.id}/edit`}

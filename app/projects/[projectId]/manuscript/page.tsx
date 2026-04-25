@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { ManuscriptActions } from "@/components/manuscript-actions";
 import { StatusPill } from "@/components/status-pill";
 import { requireUserIdOrRedirect } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -53,6 +54,11 @@ export default async function ManuscriptPage({
     0,
   );
 
+  const fullText = project.chapters
+    .filter((ch) => ch.content)
+    .map((ch) => `${ch.title}\n\n${ch.content}`)
+    .join("\n\n");
+
   return (
     <main className="min-h-screen px-5 py-8 sm:px-8">
       <div className="mx-auto flex w-full max-w-5xl flex-col gap-8">
@@ -78,18 +84,11 @@ export default async function ManuscriptPage({
 
           <div className="flex flex-wrap items-center gap-3">
             <StatusPill status={project.status} />
-            <button
-              onClick={() => window.print()}
-              className="rounded-full border border-[var(--line)] px-5 py-3 text-sm font-semibold text-[var(--muted)] transition hover:border-[var(--foreground)] hover:text-[var(--foreground)]"
-            >
-              Print / Save PDF
-            </button>
-            <a
-              href={`/api/projects/${project.id}/export/docx`}
-              className="rounded-full bg-[var(--foreground)] px-5 py-3 text-sm font-semibold text-[var(--paper)] transition hover:bg-[var(--accent)]"
-            >
-              Export DOCX
-            </a>
+            <ManuscriptActions
+              projectId={project.id}
+              fullText={fullText}
+              status={project.status}
+            />
           </div>
         </header>
 
