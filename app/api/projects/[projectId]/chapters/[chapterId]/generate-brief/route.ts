@@ -1,48 +1,53 @@
 import { revalidatePath } from "next/cache";
 import { NextResponse } from "next/server";
 
-import { requireUserId, unauthorizedJson } from "@/lib/auth";
+import { requireUserId } from "@/lib/auth";
+import { conflict, notFound, serverError, unauthorized } from "@/lib/api";
+import {
+  acquireChapterGenerationLock,
+  markChapterGenerationFailed,
+  readIdempotencyKey,
+} from "@/lib/generation";
+import { recentChapterSummaries, toChapterMemoryRecord } from "@/lib/memory";
 import { generateStructuredOutput } from "@/lib/openai";
 import { canGenerateForChapter, getOwnedProject, isDraftLockedStatus } from "@/lib/projects";
 import { buildBriefPrompt } from "@/lib/prompts";
 import { prisma } from "@/lib/prisma";
-import { briefResponseSchema, parseOutlineBullets } from "@/lib/schemas";
+import { briefResponseSchema, chapterPlanSchema, parseOutlineBullets } from "@/lib/schemas";
 
 export async function POST(
-  _request: Request,
+  request: Request,
   context: { params: Promise<{ projectId: string; chapterId: string }> },
 ) {
   const userId = await requireUserId();
+  if (!userId) return unauthorized();
 
-  if (!userId) {
-    return unauthorizedJson();
+  const { projectId, chapterId } = await context.params;
+  const project = await getOwnedProject(userId, projectId);
+  if (!project) return notFound("Project not found.");
+
+  const chapter = project.chapters.find((item) => item.id === chapterId);
+  if (!chapter) return notFound("Chapter not found.");
+
+  if (!canGenerateForChapter(project.chapters, chapter.chapterNumber)) {
+    return conflict(
+      "Draft chapters in order. Earlier chapters need a draft before this brief can be generated.",
+    );
+  }
+
+  const locked = await acquireChapterGenerationLock(chapterId, readIdempotencyKey(request));
+  if (!locked) {
+    return conflict("A generation is already in progress for this chapter.");
   }
 
   try {
-    const { projectId, chapterId } = await context.params;
-    const project = await getOwnedProject(userId, projectId);
-
-    if (!project) {
-      return NextResponse.json({ error: "Project not found." }, { status: 404 });
-    }
-
-    const chapter = project.chapters.find((item) => item.id === chapterId);
-
-    if (!chapter) {
-      return NextResponse.json({ error: "Chapter not found." }, { status: 404 });
-    }
-
-    if (!canGenerateForChapter(project.chapters, chapter.chapterNumber)) {
-      return NextResponse.json(
-        {
-          error:
-            "Draft chapters in order. Earlier chapters need a draft before this brief can be generated.",
-        },
-        { status: 409 },
-      );
-    }
+    const chapterTargetWords =
+      chapter.targetWords ?? Math.max(900, Math.round(project.targetWords / project.totalChapters));
+    const plan = chapterPlanSchema.safeParse(chapter.plan);
+    const records = project.chapters.map((item) => toChapterMemoryRecord(item, null));
 
     const brief = await generateStructuredOutput({
+      operation: "brief",
       name: "chapter_brief",
       schema: briefResponseSchema,
       instructions:
@@ -52,13 +57,10 @@ export async function POST(
         chapterNumber: chapter.chapterNumber,
         chapterTitle: chapter.title,
         outlineBullets: parseOutlineBullets(chapter.outlineBullets),
-        previousChapterSummaries: project.chapters
-          .filter(
-            (item) =>
-              item.chapterNumber < chapter.chapterNumber &&
-              Boolean(item.summary?.trim()),
-          )
-          .map((item) => item.summary || ""),
+        chapterTargetWords,
+        purpose: plan.success ? plan.data.purpose : null,
+        readerTransformation: plan.success ? plan.data.readerTransformation : null,
+        recentSummaries: recentChapterSummaries(records, chapter.chapterNumber),
         chapterTitles: project.chapters.map((item) => ({
           chapterNumber: item.chapterNumber,
           title: item.title,
@@ -67,12 +69,11 @@ export async function POST(
     });
 
     const updatedChapter = await prisma.chapter.update({
-      where: {
-        id: chapterId,
-      },
+      where: { id: chapterId },
       data: {
         brief,
         status: isDraftLockedStatus(chapter.status) ? chapter.status : "BRIEF_READY",
+        generationStatus: "SUCCEEDED",
       },
     });
 
@@ -81,12 +82,7 @@ export async function POST(
     return NextResponse.json({ chapter: updatedChapter });
   } catch (error) {
     console.error(error);
-
-    return NextResponse.json(
-      {
-        error: "Could not generate the chapter brief.",
-      },
-      { status: 500 },
-    );
+    await markChapterGenerationFailed(chapterId);
+    return serverError("Could not generate the chapter brief.");
   }
 }

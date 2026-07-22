@@ -65,22 +65,55 @@ export const outlineResponseSchema = z.object({
       chapterNumber: z.number().int().positive(),
       title: z.string().trim().min(1),
       bullets: z.array(z.string().trim().min(1)).min(3).max(5),
+      purpose: z.string().trim().min(1),
+      readerTransformation: z.string().trim().min(1),
+      wordTarget: z.number().int().positive(),
+      dependsOn: z.array(z.number().int().positive()).max(20),
+      sourceNeeds: z.array(z.string().trim().min(1)).max(10),
     }),
   ),
 });
 
 export const briefResponseSchema = chapterBriefSchema;
 
+// Structured continuity a chapter draft contributes to book memory. Regenerating
+// a chapter replaces its record rather than appending, keeping memory accurate.
+export const chapterMemorySchema = z.object({
+  summary: z.string().trim().min(1),
+  introducedConcepts: z.array(z.string().trim().min(1)).max(15),
+  keyDefinitions: z
+    .array(
+      z.object({
+        term: z.string().trim().min(1),
+        definition: z.string().trim().min(1),
+      }),
+    )
+    .max(15),
+  examplesUsed: z.array(z.string().trim().min(1)).max(15),
+  claims: z.array(z.string().trim().min(1)).max(15),
+  openLoops: z.array(z.string().trim().min(1)).max(15),
+  transitionNote: z.string().trim().min(1),
+});
+
 export const draftResponseSchema = z.object({
   content: z.string().trim().min(1),
-  summary: z.string().trim().min(1),
-  continuityNotes: z.string().trim().min(1),
+  memory: chapterMemorySchema,
+});
+
+// Per-chapter planning data captured on the outline chapter's `plan` JSON field.
+export const chapterPlanSchema = z.object({
+  purpose: z.string(),
+  readerTransformation: z.string(),
+  dependsOn: z.array(z.number().int().positive()),
+  sourceNeeds: z.array(z.string()),
 });
 
 export type ChapterBrief = z.infer<typeof chapterBriefSchema>;
 export type OutlineResponse = z.infer<typeof outlineResponseSchema>;
 export type BriefResponse = z.infer<typeof briefResponseSchema>;
 export type DraftResponse = z.infer<typeof draftResponseSchema>;
+export type ChapterMemoryData = z.infer<typeof chapterMemorySchema>;
+export type ChapterPlan = z.infer<typeof chapterPlanSchema>;
 export type CreateProjectInput = z.infer<typeof createProjectSchema>;
 export type UpdateProjectInput = z.infer<typeof updateProjectSchema>;
 export type UpdateChapterInput = z.infer<typeof updateChapterSchema>;

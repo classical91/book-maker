@@ -1,15 +1,13 @@
 import { revalidatePath } from "next/cache";
 import { NextResponse } from "next/server";
 
-import { requireUserId, unauthorizedJson } from "@/lib/auth";
+import { requireUserId } from "@/lib/auth";
+import { conflict, notFound, serverError, unauthorized } from "@/lib/api";
 import { generateStructuredOutput } from "@/lib/openai";
 import { getOwnedProject, isDraftLockedStatus } from "@/lib/projects";
 import { buildOutlinePrompt } from "@/lib/prompts";
 import { prisma } from "@/lib/prisma";
-import {
-  type OutlineResponse,
-  outlineResponseSchema,
-} from "@/lib/schemas";
+import { type OutlineResponse, outlineResponseSchema } from "@/lib/schemas";
 
 function normalizeOutline(payload: OutlineResponse, expectedCount: number) {
   const chapters = [...payload.chapters].sort(
@@ -28,10 +26,7 @@ function normalizeOutline(payload: OutlineResponse, expectedCount: number) {
     throw new Error("Outline chapters must be numbered sequentially starting at 1.");
   }
 
-  return {
-    summary: payload.summary,
-    chapters,
-  };
+  return { summary: payload.summary, chapters };
 }
 
 export async function POST(
@@ -39,28 +34,23 @@ export async function POST(
   context: { params: Promise<{ projectId: string }> },
 ) {
   const userId = await requireUserId();
-
-  if (!userId) {
-    return unauthorizedJson();
-  }
+  if (!userId) return unauthorized();
 
   try {
     const { projectId } = await context.params;
     const project = await getOwnedProject(userId, projectId);
 
     if (!project) {
-      return NextResponse.json({ error: "Project not found." }, { status: 404 });
+      return notFound("Project not found.");
     }
 
     if (project.chapters.some((chapter) => isDraftLockedStatus(chapter.status))) {
-      return NextResponse.json(
-        { error: "Outline regeneration is locked after drafting begins." },
-        { status: 409 },
-      );
+      return conflict("Outline regeneration is locked after drafting begins.");
     }
 
     const outline = normalizeOutline(
       await generateStructuredOutput({
+        operation: "outline",
         name: "book_outline",
         schema: outlineResponseSchema,
         instructions:
@@ -71,24 +61,13 @@ export async function POST(
     );
 
     await prisma.$transaction([
-      prisma.chapter.deleteMany({
-        where: {
-          projectId,
-        },
-      }),
+      prisma.chapter.deleteMany({ where: { projectId } }),
       prisma.bookProject.update({
-        where: {
-          id: projectId,
-        },
-        data: {
-          summary: outline.summary,
-          status: "OUTLINE_READY",
-        },
+        where: { id: projectId },
+        data: { summary: outline.summary, status: "OUTLINE_READY" },
       }),
       prisma.bookMemory.upsert({
-        where: {
-          projectId,
-        },
+        where: { projectId },
         update: {
           keyTerms: [project.title, project.genre, project.audience],
           styleRules: {
@@ -116,6 +95,13 @@ export async function POST(
           chapterNumber: chapter.chapterNumber,
           title: chapter.title,
           outlineBullets: chapter.bullets,
+          targetWords: chapter.wordTarget,
+          plan: {
+            purpose: chapter.purpose,
+            readerTransformation: chapter.readerTransformation,
+            dependsOn: chapter.dependsOn,
+            sourceNeeds: chapter.sourceNeeds,
+          },
           status: "OUTLINED",
         })),
       }),
@@ -130,12 +116,6 @@ export async function POST(
     return NextResponse.json({ project: updatedProject });
   } catch (error) {
     console.error(error);
-
-    return NextResponse.json(
-      {
-        error: "Could not generate the outline.",
-      },
-      { status: 500 },
-    );
+    return serverError("Could not generate the outline.");
   }
 }
