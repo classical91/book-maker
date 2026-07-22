@@ -41,10 +41,28 @@ model Chapter {
   createdAt      DateTime      @default(now()) @map("created_at")
   updatedAt      DateTime      @updatedAt @map("updated_at")
   project        BookProject   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  revisions      ChapterRevision[]
 
   @@unique([projectId, chapterNumber])
   @@index([projectId, status])
   @@map("chapters")
+}
+
+model ChapterRevision {
+  id        String         @id @default(cuid())
+  chapterId String         @map("chapter_id")
+  title     String
+  content   String?        @db.Text
+  summary   String?        @db.Text
+  brief     Json?
+  wordCount Int?           @map("word_count")
+  source    RevisionSource
+  model     String?
+  createdAt DateTime       @default(now()) @map("created_at")
+  chapter   Chapter        @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+
+  @@index([chapterId, createdAt])
+  @@map("chapter_revisions")
 }
 
 model BookMemory {
@@ -79,14 +97,36 @@ enum ChapterStatus {
   @@map("chapter_status")
 }
 
+enum RevisionSource {
+  MANUAL_SAVE
+  AI_GENERATION
+  AI_REGENERATION
+
+  @@map("revision_source")
+}
+
 model Ebook {
-  id        String   @id @default(cuid())
-  ownerId   String   @map("owner_id")
+  id        String          @id @default(cuid())
+  ownerId   String          @map("owner_id")
   title     String
-  content   String?  @db.Text
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  content   String?         @db.Text
+  createdAt DateTime        @default(now()) @map("created_at")
+  updatedAt DateTime        @updatedAt @map("updated_at")
+  revisions EbookRevision[]
 
   @@index([ownerId, updatedAt])
   @@map("ebooks")
+}
+
+model EbookRevision {
+  id        String         @id @default(cuid())
+  ebookId   String         @map("ebook_id")
+  title     String
+  content   String?        @db.Text
+  source    RevisionSource
+  createdAt DateTime       @default(now()) @map("created_at")
+  ebook     Ebook          @relation(fields: [ebookId], references: [id], onDelete: Cascade)
+
+  @@index([ebookId, createdAt])
+  @@map("ebook_revisions")
 }

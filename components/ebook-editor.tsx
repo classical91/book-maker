@@ -1,44 +1,67 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 
 import { DeleteEbookButton } from "@/components/delete-ebook-button";
+import { RevisionHistory } from "@/components/revision-history";
+import { SAVE_STATE_LABELS, useAutosave, type SaveResult } from "@/components/use-autosave";
 
 type Props = {
   id: string;
   initialTitle: string;
   initialContent: string;
+  initialUpdatedAt: string;
 };
 
-export function EbookEditor({ id, initialTitle, initialContent }: Props) {
+const SAVE_STATE_STYLES: Record<string, string> = {
+  saved: "text-green-700",
+  unsaved: "text-[var(--muted)]",
+  saving: "text-[var(--muted)]",
+  error: "text-red-600",
+  conflict: "text-red-600",
+};
+
+export function EbookEditor({ id, initialTitle, initialContent, initialUpdatedAt }: Props) {
   const router = useRouter();
   const [title, setTitle] = useState(initialTitle);
   const [content, setContent] = useState(initialContent);
-  const [busy, setBusy] = useState(false);
-  const [saved, setSaved] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const updatedAtRef = useRef(initialUpdatedAt);
 
-  async function handleSave() {
-    setBusy(true);
-    setSaved(false);
-    setError(null);
-    try {
-      const res = await fetch(`/api/ebooks/${id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title, content }),
-      });
-      if (!res.ok) throw new Error("Save failed");
-      setSaved(true);
-      router.refresh();
-      setTimeout(() => setSaved(false), 2500);
-    } catch {
-      setError("Could not save. Please try again.");
-    } finally {
-      setBusy(false);
-    }
-  }
+  const serialized = useMemo(() => JSON.stringify({ title, content }), [title, content]);
+
+  const save = useCallback(async (): Promise<SaveResult> => {
+    const res = await fetch(`/api/ebooks/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title, content, expectedUpdatedAt: updatedAtRef.current }),
+    });
+    if (res.status === 409) return "conflict";
+    if (!res.ok) return "error";
+    const data = await res.json();
+    if (data.ebook?.updatedAt) updatedAtRef.current = data.ebook.updatedAt;
+    router.refresh();
+    return "ok";
+  }, [id, title, content, router]);
+
+  const { state, saveNow, markSaved } = useAutosave({
+    serialized,
+    save,
+    enabled: true,
+  });
+
+  const reloadFromServer = useCallback(async () => {
+    const res = await fetch(`/api/ebooks/${id}`);
+    if (!res.ok) return;
+    const data = await res.json();
+    const nextTitle = data.ebook?.title ?? "";
+    const nextContent = data.ebook?.content ?? "";
+    setTitle(nextTitle);
+    setContent(nextContent);
+    if (data.ebook?.updatedAt) updatedAtRef.current = data.ebook.updatedAt;
+    markSaved(JSON.stringify({ title: nextTitle, content: nextContent }));
+    router.refresh();
+  }, [id, markSaved, router]);
 
   return (
     <main className="min-h-screen px-5 py-8 sm:px-10">
@@ -48,12 +71,24 @@ export function EbookEditor({ id, initialTitle, initialContent }: Props) {
             Editing e-book
           </p>
           <div className="flex flex-wrap items-center gap-3">
-            {saved && (
-              <span className="text-sm font-semibold text-green-700">Saved</span>
+            <span
+              className={`text-sm font-semibold ${SAVE_STATE_STYLES[state] ?? "text-[var(--muted)]"}`}
+            >
+              {SAVE_STATE_LABELS[state]}
+            </span>
+            {state === "conflict" && (
+              <button
+                onClick={reloadFromServer}
+                className="rounded-full border border-red-300 px-4 py-2 text-sm font-semibold text-red-600 transition hover:bg-red-50"
+              >
+                Reload latest
+              </button>
             )}
-            {error && (
-              <span className="text-sm text-red-600">{error}</span>
-            )}
+            <RevisionHistory
+              listUrl={`/api/ebooks/${id}/revisions`}
+              restoreUrl={(revisionId) => `/api/ebooks/${id}/revisions/${revisionId}/restore`}
+              onRestored={reloadFromServer}
+            />
             <DeleteEbookButton id={id} />
             <button
               onClick={() => router.push(`/ebooks/${id}`)}
@@ -62,11 +97,11 @@ export function EbookEditor({ id, initialTitle, initialContent }: Props) {
               View
             </button>
             <button
-              onClick={handleSave}
-              disabled={busy}
+              onClick={() => void saveNow()}
+              disabled={state === "saving"}
               className="rounded-full bg-[var(--foreground)] px-5 py-2.5 text-sm font-semibold text-[var(--paper)] transition hover:bg-[var(--accent)] disabled:opacity-50"
             >
-              {busy ? "Saving…" : "Save"}
+              {state === "saving" ? "Saving…" : "Save"}
             </button>
           </div>
         </header>

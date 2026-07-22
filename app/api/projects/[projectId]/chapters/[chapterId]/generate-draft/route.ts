@@ -1,8 +1,10 @@
 import { revalidatePath } from "next/cache";
 import { NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 
-import { requireUserId, unauthorizedJson } from "@/lib/auth";
-import { generateStructuredOutput } from "@/lib/openai";
+import { requireUserId } from "@/lib/auth";
+import { conflict, notFound, serverError, unauthorized } from "@/lib/api";
+import { generateStructuredOutput, OPENAI_MODEL } from "@/lib/openai";
 import {
   canGenerateForChapter,
   getOwnedProject,
@@ -10,6 +12,7 @@ import {
 } from "@/lib/projects";
 import { buildDraftPrompt } from "@/lib/prompts";
 import { prisma } from "@/lib/prisma";
+import { snapshotChapterRevision } from "@/lib/revisions";
 import {
   draftResponseSchema,
   parseChapterBrief,
@@ -24,7 +27,7 @@ export async function POST(
   const userId = await requireUserId();
 
   if (!userId) {
-    return unauthorizedJson();
+    return unauthorized();
   }
 
   try {
@@ -32,32 +35,25 @@ export async function POST(
     const project = await getOwnedProject(userId, projectId);
 
     if (!project) {
-      return NextResponse.json({ error: "Project not found." }, { status: 404 });
+      return notFound("Project not found.");
     }
 
     const chapter = project.chapters.find((item) => item.id === chapterId);
 
     if (!chapter) {
-      return NextResponse.json({ error: "Chapter not found." }, { status: 404 });
+      return notFound("Chapter not found.");
     }
 
     if (!canGenerateForChapter(project.chapters, chapter.chapterNumber)) {
-      return NextResponse.json(
-        {
-          error:
-            "Draft chapters in order. Earlier chapters need a draft before this one can be generated.",
-        },
-        { status: 409 },
+      return conflict(
+        "Draft chapters in order. Earlier chapters need a draft before this one can be generated.",
       );
     }
 
     const brief = parseChapterBrief(chapter.brief);
 
     if (!brief) {
-      return NextResponse.json(
-        { error: "Generate a chapter brief before drafting." },
-        { status: 409 },
-      );
+      return conflict("Generate a chapter brief before drafting.");
     }
 
     const draft = await generateStructuredOutput({
@@ -98,37 +94,59 @@ export async function POST(
       new Set([...existingKeyTerms, chapter.title, ...brief.takeaways]),
     );
 
-    const updatedChapter = await prisma.chapter.update({
-      where: {
-        id: chapterId,
-      },
-      data: {
-        content: draft.content,
-        summary: draft.summary,
-        wordCount: countWords(draft.content),
-        status: "DRAFTED",
-      },
-    });
+    const hadContent = Boolean(chapter.content?.trim());
 
-    await prisma.bookMemory.upsert({
-      where: {
-        projectId,
-      },
-      update: {
-        continuityNotes,
-        keyTerms: nextKeyTerms,
-      },
-      create: {
-        projectId,
-        continuityNotes,
-        keyTerms: nextKeyTerms,
-        styleRules: {
-          nonfiction: true,
-          tone: project.tone,
-          audience: project.audience,
-          genre: project.genre,
+    // Persist the draft, the snapshot of prior work, and the memory update
+    // atomically so a partial write can never leave the chapter inconsistent.
+    const updatedChapter = await prisma.$transaction(async (tx) => {
+      // Never permanently overwrite existing prose: snapshot it first so the
+      // user can restore the pre-regeneration version.
+      if (hadContent) {
+        await snapshotChapterRevision(
+          tx,
+          {
+            id: chapter.id,
+            title: chapter.title,
+            content: chapter.content,
+            summary: chapter.summary,
+            brief: chapter.brief === null ? Prisma.JsonNull : (chapter.brief as Prisma.InputJsonValue),
+            wordCount: chapter.wordCount,
+          },
+          "AI_REGENERATION",
+          { model: OPENAI_MODEL },
+        );
+      }
+
+      const nextChapter = await tx.chapter.update({
+        where: { id: chapterId },
+        data: {
+          content: draft.content,
+          summary: draft.summary,
+          wordCount: countWords(draft.content),
+          status: "DRAFTED",
         },
-      },
+      });
+
+      await tx.bookMemory.upsert({
+        where: { projectId },
+        update: {
+          continuityNotes,
+          keyTerms: nextKeyTerms,
+        },
+        create: {
+          projectId,
+          continuityNotes,
+          keyTerms: nextKeyTerms,
+          styleRules: {
+            nonfiction: true,
+            tone: project.tone,
+            audience: project.audience,
+            genre: project.genre,
+          },
+        },
+      });
+
+      return nextChapter;
     });
 
     await syncProjectStatus(projectId);
@@ -144,12 +162,6 @@ export async function POST(
     });
   } catch (error) {
     console.error(error);
-
-    return NextResponse.json(
-      {
-        error: "Could not generate the chapter draft.",
-      },
-      { status: 500 },
-    );
+    return serverError("Could not generate the chapter draft.");
   }
 }

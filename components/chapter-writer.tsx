@@ -1,9 +1,11 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 
+import { RevisionHistory } from "@/components/revision-history";
 import { StatusPill } from "@/components/status-pill";
+import { SAVE_STATE_LABELS, useAutosave, type SaveResult } from "@/components/use-autosave";
 import type { ChapterBrief } from "@/lib/schemas";
 import { countWords } from "@/lib/utils";
 
@@ -17,19 +19,22 @@ type ChapterWriterProps = {
   initialContent: string;
   initialSummary: string;
   initialStatus: string;
+  initialUpdatedAt: string;
   previousChapterId?: string;
   nextChapterId?: string;
 };
 
-async function requestJson(url: string, init?: RequestInit) {
-  const response = await fetch(url, init);
+const SAVE_STATE_STYLES: Record<string, string> = {
+  saved: "text-green-700",
+  unsaved: "text-[var(--muted)]",
+  saving: "text-[var(--muted)]",
+  error: "text-red-600",
+  conflict: "text-red-600",
+};
+
+async function readError(response: Response) {
   const data = await response.json().catch(() => ({}));
-
-  if (!response.ok) {
-    throw new Error(data.error || "The request failed.");
-  }
-
-  return data;
+  return data?.error?.message as string | undefined;
 }
 
 export default function ChapterWriter({
@@ -42,6 +47,7 @@ export default function ChapterWriter({
   initialContent,
   initialSummary,
   initialStatus,
+  initialUpdatedAt,
   previousChapterId,
   nextChapterId,
 }: ChapterWriterProps) {
@@ -54,35 +60,73 @@ export default function ChapterWriter({
   const [busy, setBusy] = useState<null | "brief" | "draft" | "save">(null);
   const [message, setMessage] = useState<string | null>(null);
 
+  const updatedAtRef = useRef(initialUpdatedAt);
+
   const wordCount = countWords(content);
   const hasDraft = Boolean(content.trim());
+
+  const serialized = useMemo(
+    () => JSON.stringify({ title, content, summary }),
+    [title, content, summary],
+  );
+
+  const patchChapter = useCallback(
+    async (payload: Record<string, unknown>) => {
+      const res = await fetch(`/api/projects/${projectId}/chapters/${chapterId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...payload, expectedUpdatedAt: updatedAtRef.current }),
+      });
+      if (res.status === 409) return { result: "conflict" as SaveResult };
+      if (!res.ok) return { result: "error" as SaveResult, error: await readError(res) };
+      const data = await res.json();
+      if (data.chapter?.updatedAt) updatedAtRef.current = data.chapter.updatedAt;
+      return { result: "ok" as SaveResult, chapter: data.chapter };
+    },
+    [projectId, chapterId],
+  );
+
+  const save = useCallback(async (): Promise<SaveResult> => {
+    const { result } = await patchChapter({ title, content, summary, status });
+    if (result === "ok") router.refresh();
+    return result;
+  }, [patchChapter, title, content, summary, status, router]);
+
+  const { state, saveNow, markSaved } = useAutosave({ serialized, save });
+
+  const reloadFromServer = useCallback(async () => {
+    const res = await fetch(`/api/projects/${projectId}/chapters/${chapterId}`);
+    if (!res.ok) return;
+    const data = await res.json();
+    const c = data.chapter;
+    if (!c) return;
+    setTitle(c.title ?? "");
+    setContent(c.content ?? "");
+    setSummary(c.summary ?? "");
+    setStatus(c.status);
+    if (c.updatedAt) updatedAtRef.current = c.updatedAt;
+    markSaved(JSON.stringify({ title: c.title ?? "", content: c.content ?? "", summary: c.summary ?? "" }));
+    router.refresh();
+  }, [projectId, chapterId, markSaved, router]);
 
   async function generateBrief() {
     setBusy("brief");
     setMessage(null);
-
     try {
-      const data = await requestJson(
+      const res = await fetch(
         `/api/projects/${projectId}/chapters/${chapterId}/generate-brief`,
         { method: "POST" },
       );
-      const nextBrief = data.chapter?.brief as ChapterBrief | undefined;
-
-      if (nextBrief) {
-        setBrief(nextBrief);
-      }
-
-      if (data.chapter?.status) {
-        setStatus(data.chapter.status);
-      }
-
+      if (!res.ok) throw new Error((await readError(res)) || "Could not generate the chapter brief.");
+      const data = await res.json();
+      if (data.chapter?.brief) setBrief(data.chapter.brief as ChapterBrief);
+      if (data.chapter?.status) setStatus(data.chapter.status);
+      if (data.chapter?.updatedAt) updatedAtRef.current = data.chapter.updatedAt;
       setMessage("Chapter brief ready.");
       router.refresh();
     } catch (error) {
       console.error(error);
-      setMessage(
-        error instanceof Error ? error.message : "Could not generate the chapter brief.",
-      );
+      setMessage(error instanceof Error ? error.message : "Could not generate the chapter brief.");
     } finally {
       setBusy(null);
     }
@@ -91,71 +135,54 @@ export default function ChapterWriter({
   async function generateDraft() {
     setBusy("draft");
     setMessage(null);
-
     try {
-      const data = await requestJson(
+      const res = await fetch(
         `/api/projects/${projectId}/chapters/${chapterId}/generate-draft`,
         { method: "POST" },
       );
-
-      if (data.chapter?.content) {
-        setContent(data.chapter.content);
-      }
-
-      if (data.chapter?.summary) {
-        setSummary(data.chapter.summary);
-      }
-
-      if (data.chapter?.status) {
-        setStatus(data.chapter.status);
-      }
-
-      setMessage("Chapter draft generated.");
+      if (!res.ok) throw new Error((await readError(res)) || "Could not generate the chapter draft.");
+      const data = await res.json();
+      const nextContent = data.chapter?.content ?? content;
+      const nextSummary = data.chapter?.summary ?? summary;
+      setContent(nextContent);
+      setSummary(nextSummary);
+      if (data.chapter?.status) setStatus(data.chapter.status);
+      if (data.chapter?.updatedAt) updatedAtRef.current = data.chapter.updatedAt;
+      // The generated draft is already persisted server-side.
+      markSaved(JSON.stringify({ title, content: nextContent, summary: nextSummary }));
+      setMessage("Chapter draft generated. Your previous version is saved in history.");
       router.refresh();
     } catch (error) {
       console.error(error);
-      setMessage(
-        error instanceof Error ? error.message : "Could not generate the chapter draft.",
-      );
+      setMessage(error instanceof Error ? error.message : "Could not generate the chapter draft.");
     } finally {
       setBusy(null);
     }
   }
 
-  async function saveChapter(nextStatus?: string, redirectToNext = false) {
+  async function changeStatus(nextStatus: string, redirectToNext = false) {
     setBusy("save");
     setMessage(null);
-
-    try {
-      const data = await requestJson(`/api/projects/${projectId}/chapters/${chapterId}`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          title,
-          content,
-          summary,
-          status: nextStatus || status,
-        }),
-      });
-
-      if (data.chapter?.status) {
-        setStatus(data.chapter.status);
-      }
-
+    const { result, chapter, error } = await patchChapter({
+      title,
+      content,
+      summary,
+      status: nextStatus,
+    });
+    if (result === "ok") {
+      if (chapter?.status) setStatus(chapter.status);
+      markSaved(JSON.stringify({ title, content, summary }));
       setMessage("Chapter saved.");
       router.refresh();
-
       if (redirectToNext && nextChapterId) {
         router.push(`/projects/${projectId}/chapters/${nextChapterId}`);
       }
-    } catch (error) {
-      console.error(error);
-      setMessage(error instanceof Error ? error.message : "Could not save the chapter.");
-    } finally {
-      setBusy(null);
+    } else if (result === "conflict") {
+      setMessage("This chapter changed elsewhere. Reload latest to continue.");
+    } else {
+      setMessage(error || "Could not save the chapter.");
     }
+    setBusy(null);
   }
 
   return (
@@ -173,9 +200,22 @@ export default function ChapterWriter({
             </div>
             <div className="text-right text-xs text-[var(--muted)]">
               <p>{wordCount} words</p>
+              <p className={`mt-1 font-semibold ${SAVE_STATE_STYLES[state] ?? "text-[var(--muted)]"}`}>
+                {SAVE_STATE_LABELS[state]}
+              </p>
               {message ? <p className="mt-1 max-w-[12rem] text-[var(--foreground)]">{message}</p> : null}
             </div>
           </div>
+
+          {state === "conflict" && (
+            <button
+              type="button"
+              onClick={() => void reloadFromServer()}
+              className="w-full rounded-full border border-red-300 px-4 py-2 text-sm font-semibold text-red-600 transition hover:bg-red-50"
+            >
+              Reload latest
+            </button>
+          )}
 
           <div className="space-y-3">
             <h2 className="font-serif text-2xl leading-tight text-[var(--foreground)]">
@@ -262,15 +302,15 @@ export default function ChapterWriter({
             <div className="grid gap-3">
               <button
                 type="button"
-                onClick={() => saveChapter()}
-                disabled={busy !== null}
+                onClick={() => void saveNow()}
+                disabled={busy !== null || state === "saving"}
                 className="rounded-full border border-[var(--line)] px-4 py-2 text-sm font-semibold text-[var(--foreground)] transition hover:bg-[rgba(255,255,255,0.7)] disabled:cursor-not-allowed disabled:opacity-60"
               >
-                {busy === "save" ? "Saving..." : "Save draft"}
+                {state === "saving" ? "Saving..." : "Save draft"}
               </button>
               <button
                 type="button"
-                onClick={() => saveChapter("REVIEWED")}
+                onClick={() => changeStatus("REVIEWED")}
                 disabled={busy !== null || !hasDraft}
                 className="rounded-full border border-[var(--line)] px-4 py-2 text-sm font-semibold text-[var(--foreground)] transition hover:bg-[rgba(255,255,255,0.7)] disabled:cursor-not-allowed disabled:opacity-60"
               >
@@ -278,7 +318,7 @@ export default function ChapterWriter({
               </button>
               <button
                 type="button"
-                onClick={() => saveChapter("COMPLETE")}
+                onClick={() => changeStatus("COMPLETE")}
                 disabled={busy !== null || !hasDraft}
                 className="rounded-full border border-[var(--line)] px-4 py-2 text-sm font-semibold text-[var(--foreground)] transition hover:bg-[rgba(255,255,255,0.7)] disabled:cursor-not-allowed disabled:opacity-60"
               >
@@ -287,7 +327,7 @@ export default function ChapterWriter({
               {nextChapterId ? (
                 <button
                   type="button"
-                  onClick={() => saveChapter("COMPLETE", true)}
+                  onClick={() => changeStatus("COMPLETE", true)}
                   disabled={busy !== null || !hasDraft}
                   className="rounded-full bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[var(--foreground)] disabled:cursor-not-allowed disabled:opacity-60"
                 >
@@ -295,6 +335,14 @@ export default function ChapterWriter({
                 </button>
               ) : null}
             </div>
+
+            <RevisionHistory
+              listUrl={`/api/projects/${projectId}/chapters/${chapterId}/revisions`}
+              restoreUrl={(revisionId) =>
+                `/api/projects/${projectId}/chapters/${chapterId}/revisions/${revisionId}/restore`
+              }
+              onRestored={reloadFromServer}
+            />
 
             <div className="flex gap-3 pt-2">
               {previousChapterId ? (
