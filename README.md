@@ -46,6 +46,11 @@ Notes:
 - `DATABASE_URL` is used by the Prisma client adapter at runtime.
 - `DIRECT_URL` is used by Prisma CLI commands.
 - The default model in the repo is `gpt-5.1`, but you can override it.
+- Each generation step can use its own model via `OPENAI_OUTLINE_MODEL`,
+  `OPENAI_BRIEF_MODEL`, and `OPENAI_DRAFT_MODEL`; each falls back to
+  `OPENAI_MODEL`. Generation retries only transient failures (timeouts, 429,
+  5xx) with jittered backoff, and each chapter holds a generation lock so two
+  requests can't draft it at once.
 
 ## Authentication Modes
 

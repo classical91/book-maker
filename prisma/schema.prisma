@@ -28,24 +28,50 @@ model BookProject {
 }
 
 model Chapter {
-  id             String        @id @default(cuid())
-  projectId      String        @map("project_id")
-  chapterNumber  Int           @map("chapter_number")
-  title          String
-  outlineBullets Json          @map("outline_bullets")
-  brief          Json?
-  content        String?       @db.Text
-  summary        String?       @db.Text
-  wordCount      Int?          @map("word_count")
-  status         ChapterStatus @default(OUTLINED)
-  createdAt      DateTime      @default(now()) @map("created_at")
-  updatedAt      DateTime      @updatedAt @map("updated_at")
-  project        BookProject   @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  revisions      ChapterRevision[]
+  id                  String           @id @default(cuid())
+  projectId           String           @map("project_id")
+  chapterNumber       Int              @map("chapter_number")
+  title               String
+  outlineBullets      Json             @map("outline_bullets")
+  plan                Json?
+  targetWords         Int?             @map("target_words")
+  brief               Json?
+  content             String?          @db.Text
+  summary             String?          @db.Text
+  wordCount           Int?             @map("word_count")
+  status              ChapterStatus    @default(OUTLINED)
+  generationStatus    GenerationStatus @default(IDLE) @map("generation_status")
+  generationStartedAt DateTime?        @map("generation_started_at")
+  generationKey       String?          @map("generation_key")
+  createdAt           DateTime         @default(now()) @map("created_at")
+  updatedAt           DateTime         @updatedAt @map("updated_at")
+  project             BookProject      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  revisions           ChapterRevision[]
+  memory              ChapterMemory?
 
   @@unique([projectId, chapterNumber])
   @@index([projectId, status])
   @@map("chapters")
+}
+
+// Structured, per-chapter continuity record. Replaces the old append-only
+// BookMemory.continuityNotes string: regenerating a chapter replaces its record
+// rather than appending another block, so memory never goes stale or unbounded.
+model ChapterMemory {
+  id                 String   @id @default(cuid())
+  chapterId          String   @unique @map("chapter_id")
+  summary            String?  @db.Text
+  introducedConcepts Json?    @map("introduced_concepts")
+  keyDefinitions     Json?    @map("key_definitions")
+  examplesUsed       Json?    @map("examples_used")
+  claims             Json?
+  openLoops          Json?    @map("open_loops")
+  transitionNote     String?  @db.Text @map("transition_note")
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
+  chapter            Chapter  @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+
+  @@map("chapter_memory")
 }
 
 model ChapterRevision {
@@ -103,6 +129,15 @@ enum RevisionSource {
   AI_REGENERATION
 
   @@map("revision_source")
+}
+
+enum GenerationStatus {
+  IDLE
+  RUNNING
+  SUCCEEDED
+  FAILED
+
+  @@map("generation_status")
 }
 
 model Ebook {
