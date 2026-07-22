@@ -1,12 +1,14 @@
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 import { NextResponse, type NextFetchEvent, type NextRequest } from "next/server";
 
-import { hasClerkConfig } from "@/lib/runtime-config";
+import { isSingleUserMode } from "@/lib/runtime-config";
 
 const isProtectedRoute = createRouteMatcher([
   "/dashboard(.*)",
   "/projects(.*)",
   "/api/projects(.*)",
+  "/ebooks(.*)",
+  "/api/ebooks(.*)",
 ]);
 
 const clerkProxy = clerkMiddleware(async (auth, req) => {
@@ -16,7 +18,7 @@ const clerkProxy = clerkMiddleware(async (auth, req) => {
 });
 
 export default function proxy(request: NextRequest, event: NextFetchEvent) {
-  if (!hasClerkConfig()) {
+  if (isSingleUserMode()) {
     return NextResponse.next();
   }
 

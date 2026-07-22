@@ -1,0 +1,50 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  quality:
+    name: Lint, typecheck, test, build
+    runs-on: ubuntu-latest
+
+    env:
+      # Placeholder values so Prisma Client generation and the production build
+      # never require a live database or real secrets. Per-user pages are marked
+      # `dynamic = "force-dynamic"`, so `next build` does not query the database.
+      APP_MODE: single_user
+      SINGLE_USER_ID: ci
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/book_maker?schema=public
+      DIRECT_URL: postgresql://postgres:postgres@localhost:5432/book_maker?schema=public
+      OPENAI_API_KEY: sk-ci-placeholder
+      OPENAI_MODEL: gpt-5.1
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma Client
+        run: npm run db:generate
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Test
+        run: npm test
+
+      - name: Build
+        run: npm run build

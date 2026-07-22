@@ -11,6 +11,9 @@ export const metadata = {
   title: "Outline",
 };
 
+// Per-user data; never statically prerender.
+export const dynamic = "force-dynamic";
+
 export default async function OutlinePage({
   params,
 }: {

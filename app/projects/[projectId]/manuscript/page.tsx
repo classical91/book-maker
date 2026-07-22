@@ -11,6 +11,9 @@ export const metadata = {
   title: "Manuscript",
 };
 
+// Per-user data; never statically prerender.
+export const dynamic = "force-dynamic";
+
 export default async function ManuscriptPage({
   params,
 }: {

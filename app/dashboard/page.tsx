@@ -11,6 +11,9 @@ export const metadata = {
   title: "Dashboard",
 };
 
+// Per-user data; never statically prerender.
+export const dynamic = "force-dynamic";
+
 export default async function DashboardPage() {
   const userId = await requireUserIdOrRedirect();
   const authConfigured = hasClerkConfig();
@@ -32,13 +35,11 @@ export default async function DashboardPage() {
         },
       },
     }),
-    prisma.ebook
-      .findMany({
-        where: { ownerId: userId },
-        orderBy: { updatedAt: "desc" },
-        select: { id: true, title: true, updatedAt: true, content: true },
-      })
-      .catch(() => [] as { id: string; title: string; updatedAt: Date; content: string | null }[]),
+    prisma.ebook.findMany({
+      where: { ownerId: userId },
+      orderBy: { updatedAt: "desc" },
+      select: { id: true, title: true, updatedAt: true, content: true },
+    }),
   ]);
 
   return (

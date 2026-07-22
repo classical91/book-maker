@@ -27,12 +27,15 @@ Draftloom is intentionally not a one-click book generator. The workflow is:
 
 Copy `.env.example` to `.env` and replace the placeholder values.
 
-Required values:
+Always required:
 
 - `DATABASE_URL`
 - `DIRECT_URL`
 - `OPENAI_API_KEY`
 - `OPENAI_MODEL`
+
+Required for multi-user mode only:
+
 - `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`
 - `CLERK_SECRET_KEY`
 - `NEXT_PUBLIC_CLERK_SIGN_IN_URL`
@@ -43,6 +46,22 @@ Notes:
 - `DATABASE_URL` is used by the Prisma client adapter at runtime.
 - `DIRECT_URL` is used by Prisma CLI commands.
 - The default model in the repo is `gpt-5.1`, but you can override it.
+
+## Authentication Modes
+
+The app runs in one of two modes, selected with `APP_MODE`:
+
+- `single_user`: every request is attributed to `SINGLE_USER_ID` (default
+  `jason`). No sign-in is required. Use this for local development or a
+  deliberately single-user deployment.
+- `multi_user`: requests are authenticated with Clerk. The four Clerk variables
+  above are required.
+
+If `APP_MODE` is unset, the mode is inferred: `multi_user` when Clerk keys are
+present, and `single_user` in development. **In production, an unset mode with
+no Clerk keys is a hard configuration error** — the app fails closed rather than
+silently attributing every request to one shared account. To run single-user in
+production intentionally, set `APP_MODE=single_user` explicitly.
 
 ## Local Setup
 
@@ -72,6 +91,33 @@ npm run dev
 
 Open `http://localhost:3000`.
 
+## Database Migrations & Deployment
+
+The schema is managed entirely through Prisma migrations in `prisma/migrations`.
+Application pages never create or alter tables at request time.
+
+- Local development: `npm run db:migrate` (`prisma migrate dev`).
+- Production/deploy: `npm run db:deploy`.
+
+`npm run db:deploy` (`scripts/migrate-deploy.mjs`) is safe to run against:
+
+1. A fresh database — all tables are created from the migrations.
+2. A Prisma-managed database — only pending migrations are applied.
+3. A legacy database created before migrations existed — the initial migration
+   is marked as already-applied (baselined) so only newer migrations run,
+   preserving existing data.
+
+Railway runs `npm run db:deploy` before `npm run start` (see `railway.toml`), so
+migrations are applied before the app serves traffic.
+
+### Rollback notes
+
+The `add_ebooks` migration only creates the `ebooks` table (guarded with
+`IF NOT EXISTS`) and never drops or mutates existing data, so applying it is
+non-destructive. To roll back, redeploy the previous image; the extra table is
+harmless if unused. If you must remove it, `DROP TABLE "ebooks"` manually and
+delete its row from `_prisma_migrations`.
+
 ## Useful Commands
 
 ```bash
@@ -81,6 +127,7 @@ npm run typecheck
 npm run build
 npm run db:generate
 npm run db:migrate
+npm run db:deploy
 npm run db:studio
 ```
 

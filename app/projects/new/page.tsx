@@ -4,6 +4,7 @@ import Link from "next/link";
 import { HomeLogo } from "@/components/home-logo";
 import ProjectForm from "@/components/project-form";
 import { requireUserIdOrRedirect } from "@/lib/auth";
+import { hasClerkConfig } from "@/lib/runtime-config";
 
 export const metadata = {
   title: "New Project",
@@ -11,6 +12,7 @@ export const metadata = {
 
 export default async function NewProjectPage() {
   await requireUserIdOrRedirect();
+  const authConfigured = hasClerkConfig();
 
   return (
     <main className="min-h-screen">
@@ -37,7 +39,7 @@ export default async function NewProjectPage() {
               </p>
             </div>
           </div>
-          <UserButton />
+          {authConfigured && <UserButton />}
         </header>
 
         <div className="grid gap-8 lg:grid-cols-[0.92fr_1.08fr]">
