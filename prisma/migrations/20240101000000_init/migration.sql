@@ -1,6 +1,3 @@
--- CreateSchema
-CREATE SCHEMA IF NOT EXISTS "public";
-
 -- CreateEnum
 CREATE TYPE "project_status" AS ENUM ('DRAFT', 'OUTLINE_READY', 'WRITING', 'COMPLETE');
 

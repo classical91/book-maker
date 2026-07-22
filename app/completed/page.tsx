@@ -10,6 +10,9 @@ export const metadata = {
   title: "Completed Books",
 };
 
+// Per-user data; never statically prerender.
+export const dynamic = "force-dynamic";
+
 export default async function CompletedPage() {
   const userId = await requireUserIdOrRedirect();
 

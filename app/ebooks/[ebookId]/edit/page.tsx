@@ -4,6 +4,9 @@ import { EbookEditor } from "@/components/ebook-editor";
 import { requireUserIdOrRedirect } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
+// Per-user data; never statically prerender.
+export const dynamic = "force-dynamic";
+
 export default async function EditEbookPage({
   params,
 }: {

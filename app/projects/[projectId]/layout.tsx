@@ -5,6 +5,9 @@ import ProjectSidebar from "@/components/project-sidebar";
 import { requireUserIdOrRedirect } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
+// Per-user data; never statically prerender.
+export const dynamic = "force-dynamic";
+
 export default async function ProjectLayout({
   children,
   params,
