@@ -90,6 +90,12 @@ export function EbookEditor({ id, initialTitle, initialContent, initialUpdatedAt
               onRestored={reloadFromServer}
             />
             <DeleteEbookButton id={id} />
+            <a
+              href={`/api/ebooks/${id}/export/docx`}
+              className="rounded-full border border-[var(--line)] px-5 py-2.5 text-sm font-semibold text-[var(--muted)] transition hover:border-[var(--foreground)] hover:text-[var(--foreground)]"
+            >
+              Export DOCX
+            </a>
             <button
               onClick={() => router.push(`/ebooks/${id}`)}
               className="rounded-full border border-[var(--line)] px-5 py-2.5 text-sm font-semibold text-[var(--muted)] transition hover:border-[var(--foreground)] hover:text-[var(--foreground)]"

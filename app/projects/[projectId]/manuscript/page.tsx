@@ -87,11 +87,7 @@ export default async function ManuscriptPage({
 
           <div className="flex flex-wrap items-center gap-3">
             <StatusPill status={project.status} />
-            <ManuscriptActions
-              projectId={project.id}
-              fullText={fullText}
-              status={project.status}
-            />
+            <ManuscriptActions projectId={project.id} fullText={fullText} />
           </div>
         </header>
 

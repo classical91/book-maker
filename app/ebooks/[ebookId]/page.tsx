@@ -43,8 +43,16 @@ export default async function EbookPage({
               })}
             </p>
           </div>
-          <div className="flex flex-wrap items-center gap-3">
+          <div className="no-print flex flex-wrap items-center gap-3">
             {ebook.content && <SpeakButton text={ebook.content} />}
+            {ebook.content && (
+              <a
+                href={`/api/ebooks/${ebook.id}/export/docx`}
+                className="rounded-full border border-[var(--line)] px-5 py-3 text-sm font-semibold text-[var(--muted)] transition hover:border-[var(--foreground)] hover:text-[var(--foreground)]"
+              >
+                Export DOCX
+              </a>
+            )}
             <DeleteEbookButton id={ebook.id} />
             <Link
               href={`/ebooks/${ebook.id}/edit`}
