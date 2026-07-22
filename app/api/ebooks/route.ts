@@ -1,11 +1,13 @@
 import { NextResponse } from "next/server";
 
-import { requireUserId, unauthorizedJson } from "@/lib/auth";
+import { requireUserId } from "@/lib/auth";
+import { readJson, serverError, unauthorized, validationError } from "@/lib/api";
 import { prisma } from "@/lib/prisma";
+import { createEbookSchema } from "@/lib/schemas";
 
 export async function GET() {
   const userId = await requireUserId();
-  if (!userId) return unauthorizedJson();
+  if (!userId) return unauthorized();
 
   const ebooks = await prisma.ebook.findMany({
     where: { ownerId: userId },
@@ -18,20 +20,21 @@ export async function GET() {
 
 export async function POST(request: Request) {
   const userId = await requireUserId();
-  if (!userId) return unauthorizedJson();
+  if (!userId) return unauthorized();
+
+  const body = await readJson(request);
+  if (body.response) return body.response;
+
+  const parsed = createEbookSchema.safeParse(body.data);
+  if (!parsed.success) return validationError(parsed.error);
 
   try {
-    const { title } = await request.json();
-    if (!title?.trim()) {
-      return NextResponse.json({ error: "Title is required" }, { status: 400 });
-    }
-
     const ebook = await prisma.ebook.create({
-      data: { ownerId: userId, title: title.trim() },
+      data: { ownerId: userId, title: parsed.data.title },
     });
-
     return NextResponse.json({ ebook }, { status: 201 });
-  } catch {
-    return NextResponse.json({ error: "Could not create e-book." }, { status: 400 });
+  } catch (error) {
+    console.error(error);
+    return serverError("Could not create e-book.");
   }
 }

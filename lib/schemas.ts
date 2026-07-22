@@ -34,11 +34,28 @@ export const chapterBriefSchema = z.object({
   transitionNote: z.string().trim().min(1),
 });
 
+// Shared upper bound so generated output and editor updates agree on limits.
+export const MAX_CHAPTER_CONTENT = 60000;
+export const MAX_EBOOK_CONTENT = 500000;
+
 export const updateChapterSchema = z.object({
   title: z.string().trim().min(1).max(200).optional(),
-  content: z.string().max(60000).optional(),
+  content: z.string().max(MAX_CHAPTER_CONTENT).optional(),
   summary: z.string().max(4000).optional(),
   status: chapterStatusSchema.optional(),
+  // Optimistic concurrency: the `updatedAt` the client last observed.
+  expectedUpdatedAt: z.coerce.date().optional(),
+});
+
+export const createEbookSchema = z.object({
+  title: z.string().trim().min(1).max(200),
+});
+
+export const updateEbookSchema = z.object({
+  title: z.string().trim().min(1).max(200).optional(),
+  content: z.string().max(MAX_EBOOK_CONTENT).optional(),
+  // Optimistic concurrency: the `updatedAt` the client last observed.
+  expectedUpdatedAt: z.coerce.date().optional(),
 });
 
 export const outlineResponseSchema = z.object({
@@ -68,6 +85,8 @@ export type CreateProjectInput = z.infer<typeof createProjectSchema>;
 export type UpdateProjectInput = z.infer<typeof updateProjectSchema>;
 export type UpdateChapterInput = z.infer<typeof updateChapterSchema>;
 export type UpdateOutlineInput = z.infer<typeof updateOutlineSchema>;
+export type CreateEbookInput = z.infer<typeof createEbookSchema>;
+export type UpdateEbookInput = z.infer<typeof updateEbookSchema>;
 
 export function parseOutlineBullets(value: Prisma.JsonValue): string[] {
   if (!Array.isArray(value)) {

@@ -26,6 +26,7 @@ export default async function EditEbookPage({
       id={ebook.id}
       initialTitle={ebook.title}
       initialContent={ebook.content ?? ""}
+      initialUpdatedAt={ebook.updatedAt.toISOString()}
     />
   );
 }

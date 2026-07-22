@@ -1,10 +1,21 @@
 import { revalidatePath } from "next/cache";
 import { NextResponse } from "next/server";
 
-import { requireUserId, unauthorizedJson } from "@/lib/auth";
-import { getOwnedProject } from "@/lib/projects";
+import { requireUserId } from "@/lib/auth";
+import {
+  invalidState,
+  notFound,
+  readJson,
+  serverError,
+  unauthorized,
+  validationError,
+} from "@/lib/api";
+import { getOwnedProject, isDraftLockedStatus } from "@/lib/projects";
 import { prisma } from "@/lib/prisma";
 import { updateProjectSchema } from "@/lib/schemas";
+
+// Structural fields whose change would invalidate already-drafted chapters.
+const STRUCTURAL_FIELDS = ["totalChapters", "premise", "targetWords"] as const;
 
 export async function GET(
   _request: Request,
@@ -13,14 +24,14 @@ export async function GET(
   const userId = await requireUserId();
 
   if (!userId) {
-    return unauthorizedJson();
+    return unauthorized();
   }
 
   const { projectId } = await context.params;
   const project = await getOwnedProject(userId, projectId);
 
   if (!project) {
-    return NextResponse.json({ error: "Project not found." }, { status: 404 });
+    return notFound("Project not found.");
   }
 
   return NextResponse.json({ project });
@@ -33,20 +44,41 @@ export async function PATCH(
   const userId = await requireUserId();
 
   if (!userId) {
-    return unauthorizedJson();
+    return unauthorized();
+  }
+
+  const { projectId } = await context.params;
+  const existing = await getOwnedProject(userId, projectId);
+
+  if (!existing) {
+    return notFound("Project not found.");
+  }
+
+  const body = await readJson(request);
+  if (body.response) return body.response;
+
+  const parsed = updateProjectSchema.safeParse(body.data);
+  if (!parsed.success) return validationError(parsed.error);
+
+  const data = parsed.data;
+
+  // Once any chapter is drafted, changing the book's structure (chapter count,
+  // premise, target length) would invalidate work already written.
+  const draftingStarted = existing.chapters.some((chapter) =>
+    isDraftLockedStatus(chapter.status),
+  );
+  if (draftingStarted) {
+    const changedStructural = STRUCTURAL_FIELDS.filter(
+      (field) => data[field] !== undefined && data[field] !== existing[field],
+    );
+    if (changedStructural.length > 0) {
+      return invalidState(
+        `Cannot change ${changedStructural.join(", ")} after drafting has started. Reset future chapters first.`,
+      );
+    }
   }
 
   try {
-    const { projectId } = await context.params;
-    const existing = await getOwnedProject(userId, projectId);
-
-    if (!existing) {
-      return NextResponse.json({ error: "Project not found." }, { status: 404 });
-    }
-
-    const body = await request.json();
-    const data = updateProjectSchema.parse(body);
-
     const project = await prisma.bookProject.update({
       where: {
         id: projectId,
@@ -93,12 +125,6 @@ export async function PATCH(
     return NextResponse.json({ project });
   } catch (error) {
     console.error(error);
-
-    return NextResponse.json(
-      {
-        error: "Could not update the project.",
-      },
-      { status: 400 },
-    );
+    return serverError("Could not update the project.");
   }
 }

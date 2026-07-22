@@ -43,6 +43,7 @@ export default async function ChapterPage({
           content: true,
           summary: true,
           status: true,
+          updatedAt: true,
         },
       },
     },
@@ -111,6 +112,7 @@ export default async function ChapterPage({
           initialContent={chapter.content || ""}
           initialSummary={chapter.summary || ""}
           initialStatus={chapter.status}
+          initialUpdatedAt={chapter.updatedAt.toISOString()}
           previousChapterId={previousChapter?.id}
           nextChapterId={nextChapter?.id}
         />
