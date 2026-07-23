@@ -38,7 +38,7 @@ export default async function DashboardPage() {
     prisma.ebook.findMany({
       where: { ownerId: userId },
       orderBy: { updatedAt: "desc" },
-      select: { id: true, title: true, updatedAt: true, content: true },
+      select: { id: true, title: true, updatedAt: true, wordCount: true },
     }),
   ]);
 

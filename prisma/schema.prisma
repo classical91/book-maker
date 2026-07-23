@@ -145,6 +145,7 @@ model Ebook {
   ownerId   String          @map("owner_id")
   title     String
   content   String?         @db.Text
+  wordCount Int             @default(0) @map("word_count")
   createdAt DateTime        @default(now()) @map("created_at")
   updatedAt DateTime        @updatedAt @map("updated_at")
   revisions EbookRevision[]

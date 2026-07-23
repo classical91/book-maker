@@ -21,7 +21,7 @@ type ManualEbook = {
   id: string;
   title: string;
   updatedAt: Date;
-  content: string | null;
+  wordCount: number;
 };
 
 type Tab = "all" | "ai" | "manual";
@@ -133,9 +133,7 @@ export function DashboardTabs({
               )}
               <div className="divide-y divide-[var(--line)]">
                 {ebooks.map((ebook) => {
-                  const wordCount = ebook.content
-                    ? ebook.content.split(/\s+/).filter(Boolean).length
-                    : 0;
+                  const wordCount = ebook.wordCount;
                   return (
                     <Link
                       key={ebook.id}
