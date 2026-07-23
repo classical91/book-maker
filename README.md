@@ -123,12 +123,34 @@ non-destructive. To roll back, redeploy the previous image; the extra table is
 harmless if unused. If you must remove it, `DROP TABLE "ebooks"` manually and
 delete its row from `_prisma_migrations`.
 
+## Testing
+
+Unit and service tests run with [Vitest](https://vitest.dev) and require no
+database or network:
+
+```bash
+npm test          # run once
+npm run test:watch
+```
+
+They cover the pure logic most prone to regressions: Markdown block parsing,
+chapter state transitions, generation eligibility, word counting, filename
+handling, e-book validation, continuity-memory building/replacement, outline
+normalization, and export chapter filtering. CI runs them on every pull request
+alongside lint, typecheck, and build.
+
+Database-backed integration tests (ownership isolation, migrations, out-of-order
+generation rejection, revision-on-regeneration) and Playwright end-to-end flows
+are the next testing step; they require a Postgres service and Playwright
+browsers in CI and are tracked as follow-up.
+
 ## Useful Commands
 
 ```bash
 npm run dev
 npm run lint
 npm run typecheck
+npm test
 npm run build
 npm run db:generate
 npm run db:migrate
