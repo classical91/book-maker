@@ -4,6 +4,7 @@ import { requireUserId } from "@/lib/auth";
 import { notFound, serverError, unauthorized } from "@/lib/api";
 import { prisma } from "@/lib/prisma";
 import { snapshotEbookRevision } from "@/lib/revisions";
+import { countWords } from "@/lib/utils";
 
 export async function POST(
   _req: Request,
@@ -33,7 +34,11 @@ export async function POST(
 
       const updated = await tx.ebook.update({
         where: { id: ebookId },
-        data: { title: revision.title, content: revision.content },
+        data: {
+          title: revision.title,
+          content: revision.content,
+          wordCount: countWords(revision.content ?? ""),
+        },
       });
 
       return { kind: "ok" as const, ebook: updated };

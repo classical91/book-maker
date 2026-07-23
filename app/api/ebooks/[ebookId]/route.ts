@@ -5,6 +5,7 @@ import { conflict, notFound, readJson, serverError, unauthorized, validationErro
 import { prisma } from "@/lib/prisma";
 import { snapshotEbookRevision } from "@/lib/revisions";
 import { updateEbookSchema } from "@/lib/schemas";
+import { countWords } from "@/lib/utils";
 
 async function getOwned(ebookId: string, userId: string) {
   return prisma.ebook.findFirst({ where: { id: ebookId, ownerId: userId } });
@@ -70,7 +71,7 @@ export async function PATCH(
         where: { id: ebookId },
         data: {
           ...(title !== undefined && { title }),
-          ...(content !== undefined && { content }),
+          ...(content !== undefined && { content, wordCount: countWords(content) }),
         },
       });
 
