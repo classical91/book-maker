@@ -4,30 +4,11 @@ import { NextResponse } from "next/server";
 import { requireUserId } from "@/lib/auth";
 import { conflict, notFound, serverError, unauthorized } from "@/lib/api";
 import { generateStructuredOutput } from "@/lib/openai";
+import { normalizeOutline } from "@/lib/outline";
 import { getOwnedProject, isDraftLockedStatus } from "@/lib/projects";
 import { buildOutlinePrompt } from "@/lib/prompts";
 import { prisma } from "@/lib/prisma";
-import { type OutlineResponse, outlineResponseSchema } from "@/lib/schemas";
-
-function normalizeOutline(payload: OutlineResponse, expectedCount: number) {
-  const chapters = [...payload.chapters].sort(
-    (left, right) => left.chapterNumber - right.chapterNumber,
-  );
-
-  if (chapters.length !== expectedCount) {
-    throw new Error(`Expected ${expectedCount} chapters but received ${chapters.length}.`);
-  }
-
-  const hasExactSequence = chapters.every(
-    (chapter, index) => chapter.chapterNumber === index + 1,
-  );
-
-  if (!hasExactSequence) {
-    throw new Error("Outline chapters must be numbered sequentially starting at 1.");
-  }
-
-  return { summary: payload.summary, chapters };
-}
+import { outlineResponseSchema } from "@/lib/schemas";
 
 export async function POST(
   _request: Request,
